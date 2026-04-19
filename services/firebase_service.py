@@ -6,16 +6,23 @@ from config import FIREBASE_KEY_PATH, FIREBASE_KEY_JSON
 # Firebase başlat
 if not firebase_admin._apps:
     if FIREBASE_KEY_JSON:
-        # Render'da env olarak verilen JSON
-        firebase_dict = json.loads(FIREBASE_KEY_JSON)
-        cred = credentials.Certificate(firebase_dict)
+        # Render'da env olarak verilen JSON string
+        try:
+            firebase_dict = json.loads(FIREBASE_KEY_JSON)
+            cred = credentials.Certificate(firebase_dict)
+            print("✅ Firebase JSON env ile başlatıldı")
+        except json.JSONDecodeError as e:
+            print(f"❌ Firebase JSON parse hatası: {e}")
+            raise
     else:
         # Lokalde dosyadan oku
         cred = credentials.Certificate(FIREBASE_KEY_PATH)
-    
+        print("✅ Firebase dosya ile başlatıldı")
+
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
+
 # ============ KULLANICI İŞLEMLERİ ============
 
 def kullanici_ekle(isim, avatar="👤"):
@@ -61,6 +68,7 @@ def evde_durumu_guncelle(user_id, evde_mi):
     })
 
 def tum_evde_durumu_sifirla():
+    """Her gece tüm kullanıcıları evde yapar."""
     users = db.collection("users").stream()
     for user in users:
         db.collection("users").document(user.id).update({
@@ -80,12 +88,13 @@ def sevmedigim_kaldir(user_id, yemek):
 # ============ MALZEME İŞLEMLERİ ============
 
 def malzeme_ekle(isim, kategori="diger", ekleyen_id=""):
+    # Aynı isimde malzeme var mı kontrol et
     mevcut = db.collection("ingredients").where(
         "name", "==", isim
     ).limit(1).stream()
 
     if any(True for _ in mevcut):
-        return None
+        return None  # Zaten var, ekleme
 
     doc_ref = db.collection("ingredients").document()
     doc_ref.set({
