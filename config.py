@@ -8,9 +8,10 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # Firebase
 FIREBASE_KEY_PATH = os.getenv("FIREBASE_KEY_PATH", "firebase-key.json")
+FIREBASE_KEY_JSON = os.getenv("FIREBASE_KEY_JSON")
 
 # Flask
-SECRET_KEY = "ne-pisirelim-gizli-anahtar-2025"
+SECRET_KEY = os.getenv("SECRET_KEY", "ne-pisirelim-gizli-anahtar-2025")
 
 # Oylama ayarları
 OYLAMA_KAPANIS_SAATI = 16
