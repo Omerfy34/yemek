@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}Fotoğraf ile Ekle - Ne Pişirelim?{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+
+    <!-- Geri Butonu -->
+    <a href="{{ url_for('dolap') }}" class="btn btn-outline-secondary btn-sm mb-3">
+        <i class="bi bi-arrow-left"></i> Dolaba Dön
+    </a>
+
+    <!-- Başlık -->
+    <h4 class="fw-bold mb-3">📷 Fotoğraf ile Malzeme Ekle</h4>
+    <p class="text-muted mb-4">
+        Dolabının veya malzemelerin fotoğrafını çek, AI tanısın!
+    </p>
+
+    <!-- Fotoğraf Yükleme -->
+    <div class="card mb-4">
+        <div class="card-body text-center py-4">
+            
+            <!-- Önizleme -->
+            <div id="onizleme" class="mb-3 d-none">
+                <img id="onizlemeImg" src="" alt="Önizleme" class="foto-onizleme">
+            </div>
+            
+            <!-- Yükleme Alanı -->
+            <div id="yukleAlani">
+                <div class="foto-yukle-alan" onclick="document.getElementById('fotoInput').click()">
+                    <i class="bi bi-camera fs-1 text-muted"></i>
+                    <p class="text-muted mt-2 mb-0">Fotoğraf çek veya seç</p>
+                </div>
+            </div>
+            
+            <input type="file" 
+                   id="fotoInput" 
+                   accept="image/*" 
+                   capture="environment"
+                   class="d-none"
+                   onchange="fotoSecildi(this)">
+            
+            <div class="d-flex gap-2 justify-content-center mt-3">
+                <button class="btn btn-primary" 
+                        onclick="document.getElementById('fotoInput').click()">
+                    <i class="bi bi-camera"></i> Kamera
+                </button>
+                <button class="btn btn-outline-primary" 
+                        onclick="document.getElementById('fotoInput').removeAttribute('capture'); document.getElementById('fotoInput').click()">
+                    <i class="bi bi-image"></i> Galeri
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analiz Butonu -->
+    <div id="analizBtn" class="d-none mb-4">
+        <button class="btn btn-success w-100 btn-lg" onclick="fotoAnaliz()">
+            <i class="bi bi-stars"></i> AI ile Tanı
+        </button>
+    </div>
+
+    <!-- Yükleniyor -->
+    <div id="yukleniyor" class="d-none text-center mb-4">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="text-muted mt-2">AI malzemeleri tanıyor...</p>
+    </div>
+
+    <!-- Sonuçlar -->
+    <div id="sonuclar" class="d-none">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-bold">🔍 Tanınan Malzemeler</span>
+                <span class="badge bg-primary" id="taninanSayi">0</span>
+            </div>
+            <div class="card-body" id="malzemeListesiSonuc">
+                <!-- JS ile doldurulacak -->
+            </div>
+        </div>
+
+        <!-- Toplu Ekle -->
+        <button class="btn btn-primary w-100 btn-lg mb-3" onclick="secilenleriEkle()">
+            <i class="bi bi-plus-lg"></i> Seçilenleri Dolaba Ekle
+        </button>
+    </div>
+
+    <!-- Hata -->
+    <div id="hataAlani" class="d-none">
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span id="hataMesaji"></span>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let seciliFoto = null;
+
+    function fotoSecildi(input) {
+        if (input.files && input.files[0]) {
+            seciliFoto = input.files[0];
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('onizlemeImg').src = e.target.result;
+                document.getElementById('onizleme').classList.remove('d-none');
+                document.getElementById('analizBtn').classList.remove('d-none');
+                document.getElementById('sonuclar').classList.add('d-none');
+                document.getElementById('hataAlani').classList.add('d-none');
+            };
+            reader.readAsDataURL(seciliFoto);
+        }
+    }
+
+    function fotoAnaliz() {
+        if (!seciliFoto) return;
+
+        // Yükleniyor göster
+        document.getElementById('analizBtn').classList.add('d-none');
+        document.getElementById('yukleniyor').classList.remove('d-none');
+        document.getElementById('hataAlani').classList.add('d-none');
+
+        const formData = new FormData();
+        formData.append('foto', seciliFoto);
+
+        fetch('/foto-analiz', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('yukleniyor').classList.add('d-none');
+            
+            if (data.success) {
+                sonuclariGoster(data.malzemeler);
+            } else {
+                document.getElementById('hataMesaji').textContent = data.error;
+                document.getElementById('hataAlani').classList.remove('d-none');
+                document.getElementById('analizBtn').classList.remove('d-none');
+            }
+        })
+        .catch(error => {
+            document.getElementById('yukleniyor').classList.add('d-none');
+            document.getElementById('hataMesaji').textContent = 'Bir hata oluştu: ' + error;
+            document.getElementById('hataAlani').classList.remove('d-none');
+            document.getElementById('analizBtn').classList.remove('d-none');
+        });
+    }
+
+    function sonuclariGoster(malzemeler) {
+        const container = document.getElementById('malzemeListesiSonuc');
+        container.innerHTML = '';
+        
+        document.getElementById('taninanSayi').textContent = malzemeler.length;
+
+        const kategoriEmoji = {
+            'et': '🥩', 'sebze': '🥬', 'meyve': '🍎',
+            'bakliyat': '🫘', 'sut': '🧀', 'diger': '📦'
+        };
+
+        malzemeler.forEach(function(m, index) {
+            const emoji = kategoriEmoji[m.category] || '📦';
+            const belirsizClass = m.belirsiz ? 'belirsiz' : '';
+            
+            container.innerHTML += `
+                <div class="taninan-item ${belirsizClass}">
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="checkbox" 
+                               class="form-check-input malzeme-check" 
+                               id="mal${index}" 
+                               checked
+                               data-isim="${m.name}"
+                               data-kategori="${m.category}">
+                        <label for="mal${index}" class="mb-0">
+                            ${emoji} ${m.name}
+                            ${m.belirsiz ? '<span class="badge bg-warning text-dark ms-1">⚠️ Emin değil</span>' : ''}
+                        </label>
+                    </div>
+                    <span class="text-muted small">${m.category}</span>
+                </div>
+            `;
+        });
+
+        document.getElementById('sonuclar').classList.remove('d-none');
+    }
+
+    function secilenleriEkle() {
+        const checkboxlar = document.querySelectorAll('.malzeme-check:checked');
+        
+        if (checkboxlar.length === 0) {
+            alert('Hiç malzeme seçilmedi!');
+            return;
+        }
+
+        const malzemeler = [];
+        checkboxlar.forEach(function(cb) {
+            malzemeler.push({
+                isim: cb.getAttribute('data-isim'),
+                kategori: cb.getAttribute('data-kategori')
+            });
+        });
+
+        fetch('/foto-toplu-ekle', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({malzemeler: malzemeler})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '/dolap';
+            } else {
+                alert('Hata: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Hata: ' + error);
+        });
+    }
+</script>
+{% endblock %}

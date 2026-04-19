@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Dolabım - Ne Pişirelim?{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+
+    <!-- Başlık -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold mb-0">📦 Dolabım</h4>
+        <span class="badge bg-primary rounded-pill fs-6">{{ toplam }} ürün</span>
+    </div>
+
+    <!-- Ekleme Butonları -->
+    <div class="d-flex gap-2 mb-3">
+        <button class="btn btn-primary flex-grow-1" 
+                data-bs-toggle="modal" 
+                data-bs-target="#malzemeEkleModal">
+            <i class="bi bi-plus-lg"></i> Elle Ekle
+        </button>
+        <a href="{{ url_for('foto_ekle') }}" class="btn btn-outline-primary flex-grow-1">
+            <i class="bi bi-camera"></i> Fotoğrafla
+        </a>
+    </div>
+
+    <!-- Kategori Filtreleri -->
+    <div class="kategori-scroll mb-3">
+        <a href="{{ url_for('dolap') }}" 
+           class="kategori-btn {% if secili_kategori == 'hepsi' %}active{% endif %}">
+            🏠 Hepsi
+        </a>
+        {% for key, value in kategoriler.items() %}
+        <a href="{{ url_for('dolap', kategori=key) }}" 
+           class="kategori-btn {% if secili_kategori == key %}active{% endif %}">
+            {{ value }}
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Arama -->
+    <div class="mb-3">
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+                <i class="bi bi-search text-muted"></i>
+            </span>
+            <input type="text" 
+                   class="form-control border-start-0" 
+                   placeholder="Malzeme ara..." 
+                   id="malzemeAra"
+                   onkeyup="malzemeFiltrele()">
+        </div>
+    </div>
+
+    <!-- Malzeme Listesi -->
+    {% if malzemeler %}
+    <div id="malzemeListesi">
+        {% for malzeme in malzemeler %}
+        <div class="malzeme-item" data-isim="{{ malzeme.name | lower }}">
+            <div>
+                <div class="malzeme-isim">{{ malzeme.name }}</div>
+                <div class="malzeme-kategori">
+                    {{ kategoriler.get(malzeme.category, '📦 Diğer') }}
+                </div>
+            </div>
+            <div class="malzeme-aksiyonlar">
+                <!-- Düzenle -->
+                <button class="btn btn-sm btn-outline-secondary" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#duzenleModal{{ malzeme.id }}">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <!-- Sil -->
+                <a href="{{ url_for('malzeme_kaldir', malzeme_id=malzeme.id) }}" 
+                   class="btn btn-sm btn-outline-danger"
+                   onclick="return confirm('{{ malzeme.name }} silinecek. Emin misin?')">
+                    <i class="bi bi-trash"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Düzenleme Modalı -->
+        <div class="modal fade" id="duzenleModal{{ malzeme.id }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header border-0">
+                        <h5 class="modal-title fw-bold">✏️ Malzeme Düzenle</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="{{ url_for('malzeme_duzenle', malzeme_id=malzeme.id) }}" method="POST">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Malzeme Adı</label>
+                                <input type="text" class="form-control" 
+                                       name="isim" value="{{ malzeme.name }}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Kategori</label>
+                                <select class="form-select" name="kategori">
+                                    {% for key, value in kategoriler.items() %}
+                                    <option value="{{ key }}" 
+                                            {% if malzeme.category == key %}selected{% endif %}>
+                                        {{ value }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+                            <button type="submit" class="btn btn-primary">Kaydet</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">🧊</div>
+        <h5 class="mt-2">Dolap Boş</h5>
+        <p class="text-muted">
+            {% if secili_kategori != 'hepsi' %}
+                Bu kategoride malzeme yok.
+            {% else %}
+                Henüz malzeme eklenmemiş. Hadi başlayalım!
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Malzeme Ekle Modal -->
+<div class="modal fade" id="malzemeEkleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">➕ Malzeme Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('yeni_malzeme') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Malzeme Adı</label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               name="isim" 
+                               placeholder="Örn: Tavuk göğsü"
+                               required
+                               maxlength="50"
+                               id="malzemeInput">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Kategori</label>
+                        <select class="form-select form-select-lg" name="kategori">
+                            {% for key, value in kategoriler.items() %}
+                            <option value="{{ key }}">{{ value }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary px-4">Ekle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Malzeme arama
+    function malzemeFiltrele() {
+        const aranan = document.getElementById('malzemeAra').value.toLowerCase();
+        const items = document.querySelectorAll('.malzeme-item');
+        
+        items.forEach(function(item) {
+            const isim = item.getAttribute('data-isim');
+            if (isim.includes(aranan)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    // Modal açılınca input'a fokusla
+    document.getElementById('malzemeEkleModal').addEventListener('shown.bs.modal', function() {
+        document.getElementById('malzemeInput').focus();
+    });
+</script>
+{% endblock %}

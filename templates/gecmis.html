@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Geçmiş - Ne Pişirelim?{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+
+    <div class="mb-4">
+        <h4 class="fw-bold">📊 Geçmiş (Son 7 Gün)</h4>
+    </div>
+
+    {% if gecmis and gecmis | length > 0 %}
+        {% for gun in gecmis %}
+        {% set ay_isimleri = {'01':'Ocak','02':'Şubat','03':'Mart','04':'Nisan','05':'Mayıs','06':'Haziran','07':'Temmuz','08':'Ağustos','09':'Eylül','10':'Ekim','11':'Kasım','12':'Aralık'} %}
+        {% set tarih_parcalari = gun.date.split('-') %}
+        {% set gun_no = tarih_parcalari[2] | int %}
+        {% set ay_adi = ay_isimleri.get(tarih_parcalari[1], tarih_parcalari[1]) %}
+        
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-bold">📅 {{ gun_no }} {{ ay_adi }} {{ tarih_parcalari[0] }}</span>
+                <span class="badge {% if gun.status == 'voting' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                    {% if gun.status == 'voting' %}Oylama Açık{% else %}Tamamlandı{% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                {% if gun.menus %}
+                    {% for tarif in gun.menus %}
+                    <div class="gecmis-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-semibold">
+                                    {% if gun.winner is not none and gun.winner == loop.index0 %}🏆{% endif %}
+                                    {{ tarif.name }}
+                                </span>
+                                <div class="text-muted small">
+                                    {% if tarif.cookTime %}<i class="bi bi-clock"></i> {{ tarif.cookTime }}{% endif %}
+                                    {% if tarif.calories %}<i class="bi bi-fire ms-2"></i> {{ tarif.calories }} kcal{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <h5 class="mt-3">Henüz Geçmiş Yok</h5>
+            <p class="text-muted">Menü oluşturup oylama yaptıkça burada geçmiş görünecek.</p>
+            <a href="{{ url_for('menu') }}" class="btn btn-primary mt-2">
+                <i class="bi bi-egg-fried"></i> Menüye Git
+            </a>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Profil - Ne Pişirelim?{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+
+    <!-- Profil Başlığı -->
+    <div class="text-center mb-4">
+        <div class="profil-avatar">{{ user.avatar }}</div>
+        <h4 class="fw-bold mt-3">{{ user.name }}</h4>
+        <button class="btn btn-sm btn-outline-primary mt-2" 
+                data-bs-toggle="modal" 
+                data-bs-target="#profilDuzenleModal">
+            <i class="bi bi-pencil"></i> Profili Düzenle
+        </button>
+    </div>
+
+    <!-- Evde Durumu -->
+    <div class="card mb-4">
+        <div class="card-header">🏠 Bugünkü Durumum</div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    {% if user.isHome %}
+                        <span class="badge bg-success-subtle text-success fs-6">✅ Evdeyim</span>
+                    {% else %}
+                        <span class="badge bg-danger-subtle text-danger fs-6">🚪 Bugün evde değilim</span>
+                    {% endif %}
+                </div>
+                <form action="{{ url_for('evde_durumu') }}" method="POST">
+                    {% if user.isHome %}
+                        <input type="hidden" name="evde" value="false">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-house-slash"></i> Evde Değilim
+                        </button>
+                    {% else %}
+                        <input type="hidden" name="evde" value="true">
+                        <button type="submit" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-house-check"></i> Evdeyim
+                        </button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sevmediğim Yemekler -->
+    <div class="card mb-4">
+        <div class="card-header">🚫 Sevmediğim Yemekler / Malzemeler</div>
+        <div class="card-body">
+            <form action="{{ url_for('sevmedik_ekle') }}" method="POST" class="mb-3">
+                <div class="input-group">
+                    <input type="text" class="form-control" name="yemek" 
+                           placeholder="Örn: Bezelye, Balık, Karnabahar..."
+                           required maxlength="30">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-lg"></i> Ekle
+                    </button>
+                </div>
+            </form>
+
+            {% if user.dislikedFoods and user.dislikedFoods | length > 0 %}
+            <div class="d-flex flex-wrap gap-2">
+                {% for yemek in user.dislikedFoods %}
+                <div class="sevmedik-chip">
+                    <span>🚫 {{ yemek }}</span>
+                    <a href="{{ url_for('sevmedik_kaldir', yemek=yemek) }}" class="sevmedik-kaldir" title="Kaldır">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">
+                <i class="bi bi-info-circle"></i> Sevmediğin yemek/malzeme ekle, AI bunları önermeyecek.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- İstatistikler -->
+    <div class="card mb-4">
+        <div class="card-header">📊 İstatistikler</div>
+        <div class="card-body">
+            <div class="row g-3 text-center">
+                <div class="col-6">
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">
+                            {{ user.dislikedFoods | length if user.dislikedFoods else 0 }}
+                        </div>
+                        <div class="stat-mini-label">Sevmediğim</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">
+                            {% if user.isHome %}✅{% else %}❌{% endif %}
+                        </div>
+                        <div class="stat-mini-label">Evde Durumu</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Profil Düzenle Modal -->
+<div class="modal fade" id="profilDuzenleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">✏️ Profili Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('profil_duzenle') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Avatar Seç</label>
+                        <div class="avatar-grid">
+                            {% for avatar in ['👩', '👨', '👧', '👦', '👵', '👴', '🧑', '👶'] %}
+                            <div class="avatar-option">
+                                <input type="radio" name="avatar" id="editAvatar{{ loop.index }}" 
+                                       value="{{ avatar }}"
+                                       {% if user.avatar == avatar %}checked{% endif %}
+                                       class="avatar-radio">
+                                <label for="editAvatar{{ loop.index }}" class="avatar-label">{{ avatar }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editIsim" class="form-label fw-semibold">İsim</label>
+                        <input type="text" class="form-control form-control-lg" 
+                               id="editIsim" name="isim" value="{{ user.name }}" required maxlength="20">
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary px-4">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

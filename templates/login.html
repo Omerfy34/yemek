@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Giriş - Ne Pişirelim?{% endblock %}
+
+{% block content %}
+<div class="login-page">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8 col-lg-6">
+                
+                <!-- Logo & Başlık -->
+                <div class="text-center mb-5">
+                    <div class="login-logo">🍳</div>
+                    <h1 class="login-title">Ne Pişirelim?</h1>
+                    <p class="login-subtitle">Hoş geldin! Kim giriyorsun?</p>
+                </div>
+
+                <!-- Düzenleme modu butonu -->
+                {% if kullanicilar %}
+                <div class="text-end mb-3">
+                    <button class="btn btn-sm btn-outline-secondary" 
+                            onclick="toggleEditMode()" 
+                            id="editBtn">
+                        <i class="bi bi-pencil"></i> Düzenle
+                    </button>
+                </div>
+                {% endif %}
+
+                <!-- Kullanıcı Kartları -->
+                {% if kullanicilar %}
+                <div class="row g-3 mb-4">
+                    {% for kullanici in kullanicilar %}
+                    <div class="col-6 col-sm-4">
+                        <div class="position-relative">
+                            <!-- Giriş linki -->
+                            <a href="{{ url_for('giris_yap', user_id=kullanici.id) }}" 
+                               class="user-card text-decoration-none user-login-card">
+                                <div class="user-card-avatar">{{ kullanici.avatar }}</div>
+                                <div class="user-card-name">{{ kullanici.name }}</div>
+                            </a>
+                            
+                            <!-- Silme butonu (düzenleme modunda görünür) -->
+                            <button class="btn btn-danger btn-sm edit-delete-btn d-none"
+                                    onclick="event.stopPropagation(); confirmDelete('{{ kullanici.id }}', '{{ kullanici.name }}')"
+                                    title="Sil">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Yeni Kullanıcı Ekle -->
+                    <div class="col-6 col-sm-4">
+                        <div class="user-card add-user-card" 
+                             data-bs-toggle="modal" 
+                             data-bs-target="#kullaniciEkleModal">
+                            <div class="user-card-avatar">➕</div>
+                            <div class="user-card-name">Üye Ekle</div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Hiç kullanıcı yoksa -->
+                <div class="text-center mb-4">
+                    <div class="empty-state">
+                        <div class="empty-icon">👨‍👩‍👧‍👦</div>
+                        <p>Henüz aile üyesi eklenmemiş.</p>
+                        <button class="btn btn-primary" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#kullaniciEkleModal">
+                            İlk Üyeyi Ekle
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kullanıcı Ekle Modal -->
+<div class="modal fade" id="kullaniciEkleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">👤 Yeni Üye Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('yeni_kullanici') }}" method="POST">
+                <div class="modal-body">
+                    
+                    <!-- Avatar Seçimi -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Avatar Seç</label>
+                        <div class="avatar-grid">
+                            {% for avatar in avatarlar %}
+                            <div class="avatar-option">
+                                <input type="radio" name="avatar" 
+                                       id="avatar{{ loop.index }}" 
+                                       value="{{ avatar }}"
+                                       {% if loop.first %}checked{% endif %}
+                                       class="avatar-radio">
+                                <label for="avatar{{ loop.index }}" 
+                                       class="avatar-label">{{ avatar }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- İsim -->
+                    <div class="mb-3">
+                        <label for="isim" class="form-label fw-semibold">İsim</label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               id="isim" 
+                               name="isim" 
+                               placeholder="Adını yaz..."
+                               required
+                               maxlength="20">
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" 
+                            class="btn btn-light" 
+                            data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" 
+                            class="btn btn-primary px-4">Ekle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Silme Onay Modal -->
+<div class="modal fade" id="silOnayModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">⚠️ Emin misin?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p><strong id="silinecekIsim"></strong> silinecek.</p>
+                <p class="text-muted small">Bu işlem geri alınamaz.</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" 
+                        class="btn btn-light px-4" 
+                        data-bs-dismiss="modal">İptal</button>
+                <a href="#" 
+                   id="silBtn" 
+                   class="btn btn-danger px-4">Sil</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let editMode = false;
+
+    function toggleEditMode() {
+        editMode = !editMode;
+        const deleteBtns = document.querySelectorAll('.edit-delete-btn');
+        const loginCards = document.querySelectorAll('.user-login-card');
+        const editBtn = document.getElementById('editBtn');
+
+        if (editMode) {
+            deleteBtns.forEach(btn => btn.classList.remove('d-none'));
+            loginCards.forEach(card => {
+                card.style.pointerEvents = 'none';
+                card.style.opacity = '0.7';
+            });
+            editBtn.innerHTML = '<i class="bi bi-check-lg"></i> Tamam';
+            editBtn.classList.remove('btn-outline-secondary');
+            editBtn.classList.add('btn-success');
+        } else {
+            deleteBtns.forEach(btn => btn.classList.add('d-none'));
+            loginCards.forEach(card => {
+                card.style.pointerEvents = 'auto';
+                card.style.opacity = '1';
+            });
+            editBtn.innerHTML = '<i class="bi bi-pencil"></i> Düzenle';
+            editBtn.classList.remove('btn-success');
+            editBtn.classList.add('btn-outline-secondary');
+        }
+    }
+
+    function confirmDelete(userId, userName) {
+        document.getElementById('silinecekIsim').textContent = userName;
+        document.getElementById('silBtn').href = '/kullanici-sil/' + userId;
+        new bootstrap.Modal(document.getElementById('silOnayModal')).show();
+    }
+</script>
+{% endblock %}

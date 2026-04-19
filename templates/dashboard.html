@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Ana Sayfa - Ne Pişirelim?{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+
+    <!-- Üst Karşılama -->
+    <div class="welcome-section mb-4">
+        <h4 class="fw-bold">Merhaba {{ session.get('user_avatar', '👤') }} {{ session.get('user_name', '') }}!</h4>
+        <p class="text-muted mb-0">📅 {{ tarih }}</p>
+    </div>
+
+    <!-- İstatistik Kartları -->
+    <div class="row g-3 mb-4">
+        <div class="col-4">
+            <div class="stat-card">
+                <div class="stat-number">{{ malzeme_sayisi }}</div>
+                <div class="stat-label">Malzeme</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="stat-card">
+                <div class="stat-number">{{ evde_olan_sayisi }}</div>
+                <div class="stat-label">Evde</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="stat-card">
+                <div class="stat-number {% if oylama_acik %}text-success{% else %}text-danger{% endif %}">
+                    {% if oylama_acik %}Açık{% else %}Kapandı{% endif %}
+                </div>
+                <div class="stat-label">Oylama</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Evde Olmayanlar -->
+    {% set evde_olmayanlar = kullanicilar | selectattr('isHome', 'equalto', false) | list %}
+    {% if evde_olmayanlar %}
+    <div class="alert alert-warning d-flex align-items-center mb-4">
+        <i class="bi bi-house-slash me-2 fs-5"></i>
+        <div>
+            <strong>Bugün evde olmayanlar:</strong>
+            {% for k in evde_olmayanlar %}
+                <span class="badge bg-warning text-dark ms-1">{{ k.avatar }} {{ k.name }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Sevmediğimiz Yemekler Özeti -->
+    {% set tum_sevmedikler = [] %}
+    {% for k in kullanicilar %}
+        {% if k.dislikedFoods %}
+            {% for yemek in k.dislikedFoods %}
+                {% if tum_sevmedikler.append({'kisi': k.name, 'avatar': k.avatar, 'yemek': yemek}) %}{% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endfor %}
+    {% if tum_sevmedikler %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-exclamation-circle"></i> 🚫 Aile Üyelerinin Sevmedikleri
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                {% for item in tum_sevmedikler %}
+                <div class="sevmedik-dashboard-chip">
+                    {{ item.avatar }} {{ item.kisi }}: <strong>{{ item.yemek }}</strong>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Günün Menüsü Kartı -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>🍽️ Günün Menüsü</span>
+            {% if oylama_acik %}
+                <span class="badge bg-success">⏰ {{ kalan }} kaldı</span>
+            {% else %}
+                <span class="badge bg-danger">Oylama kapandı</span>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            {% if menu_data %}
+                {% for tarif in menu_data.menus %}
+                <div class="dash-menu-item">
+                    <div>
+                        <span class="fw-semibold">
+                            {% if kazananlar and loop.index0 in kazananlar %}🏆{% endif %}
+                            {{ tarif.name }}
+                        </span>
+                        <span class="text-muted small ms-2">{{ tarif.cookTime }}</span>
+                    </div>
+                    {% if sonuclar %}
+                    <span class="badge bg-primary rounded-pill">
+                        👍 {{ sonuclar[loop.index0].count }}
+                    </span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                {% if vermeyenler and oylama_acik %}
+                <div class="mt-3 pt-3 border-top">
+                    <small class="text-danger fw-bold">
+                        ⚠️ Oy vermeyenler:
+                        {% for k in vermeyenler %}
+                            {{ k.avatar }} {{ k.name }}{% if not loop.last %},{% endif %}
+                        {% endfor %}
+                    </small>
+                </div>
+                {% endif %}
+
+                <div class="mt-3">
+                    <a href="{{ url_for('menu') }}" class="btn btn-outline-primary btn-sm w-100">
+                        Detayları Gör
+                    </a>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <div class="empty-icon">🍳</div>
+                    <p class="text-muted mt-2">Henüz menü oluşturulmadı.</p>
+                    <a href="{{ url_for('menu') }}" class="btn btn-primary mt-2">
+                        <i class="bi bi-stars"></i> Menü Oluştur
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Hızlı Erişim -->
+    <div class="row g-3 mb-4">
+        <div class="col-6">
+            <a href="{{ url_for('dolap') }}" class="quick-card text-decoration-none">
+                <div class="quick-icon">📦</div>
+                <div class="quick-label">Dolabım</div>
+                <div class="quick-desc">{{ malzeme_sayisi }} malzeme</div>
+            </a>
+        </div>
+        <div class="col-6">
+            <a href="{{ url_for('menu') }}" class="quick-card text-decoration-none">
+                <div class="quick-icon">🍽️</div>
+                <div class="quick-label">Günün Menüsü</div>
+                <div class="quick-desc">3 seçenek</div>
+            </a>
+        </div>
+        <div class="col-6">
+            <a href="{{ url_for('profil') }}" class="quick-card text-decoration-none">
+                <div class="quick-icon">👤</div>
+                <div class="quick-label">Profilim</div>
+                <div class="quick-desc">Tercihlerim</div>
+            </a>
+        </div>
+        <div class="col-6">
+            <a href="{{ url_for('gecmis') }}" class="quick-card text-decoration-none">
+                <div class="quick-icon">📊</div>
+                <div class="quick-label">Geçmiş</div>
+                <div class="quick-desc">Son 7 gün</div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Aile Üyeleri -->
+    <div class="card mb-4">
+        <div class="card-header">👨‍👩‍👧‍👦 Aile Üyeleri</div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-3">
+                {% for k in kullanicilar %}
+                <div class="family-member text-center">
+                    <div class="family-avatar">{{ k.avatar }}</div>
+                    <div class="family-name">{{ k.name }}</div>
+                    <div class="family-status">
+                        {% if k.isHome %}
+                            <span class="badge bg-success-subtle text-success">Evde</span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger">Dışarıda</span>
+                        {% endif %}
+                    </div>
+                    {% if k.dislikedFoods and k.dislikedFoods | length > 0 %}
+                    <div class="mt-1">
+                        <small class="text-danger">🚫 {{ k.dislikedFoods | length }} sevmediği</small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
