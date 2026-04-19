@@ -6,16 +6,16 @@ from config import FIREBASE_KEY_PATH, FIREBASE_KEY_JSON
 # Firebase başlat
 if not firebase_admin._apps:
     if FIREBASE_KEY_JSON:
+        # Render'da env olarak verilen JSON
         firebase_dict = json.loads(FIREBASE_KEY_JSON)
         cred = credentials.Certificate(firebase_dict)
     else:
+        # Lokalde dosyadan oku
         cred = credentials.Certificate(FIREBASE_KEY_PATH)
-
+    
     firebase_admin.initialize_app(cred)
 
-# Firestore veritabanı bağlantısı
 db = firestore.client()
-
 # ============ KULLANICI İŞLEMLERİ ============
 
 def kullanici_ekle(isim, avatar="👤"):
